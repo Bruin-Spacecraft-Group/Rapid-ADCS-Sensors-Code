@@ -60,8 +60,8 @@ all: main-build
 main-build: IAM-20380HT.elf secondary-outputs
 
 # Tool invocations
-IAM-20380HT.elf IAM-20380HT.map: $(OBJS) $(USER_OBJS) C:\Users\munng\OneDrive\Documents\GitHub\Rapid-ACDS-I2C-Data-Collection\IAM-20380HT\STM32G431KBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "IAM-20380HT.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\munng\OneDrive\Documents\GitHub\Rapid-ACDS-I2C-Data-Collection\IAM-20380HT\STM32G431KBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="IAM-20380HT.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+IAM-20380HT.elf IAM-20380HT.map: $(OBJS) $(USER_OBJS) C:\Users\munng\OneDrive\Documents\GitHub\Rapid-ADCS-Sensors-Code\IAM-20380HT\STM32G431KBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "IAM-20380HT.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\munng\OneDrive\Documents\GitHub\Rapid-ADCS-Sensors-Code\IAM-20380HT\STM32G431KBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="IAM-20380HT.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

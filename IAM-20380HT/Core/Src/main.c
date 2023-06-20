@@ -55,7 +55,12 @@ SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+int xData = 0;
+int yData = 0;
+int zData = 0;
+double xDataRef = 0;
+double yDataRef = 0;
+double zDataRef = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -104,13 +109,17 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-
+  IAM_INIT();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  xData = IAM_GET_DATA(GYRO_XOUT_H, 1);
+	  yData = IAM_GET_DATA(GYRO_YOUT_H, 1);
+	  zData = IAM_GET_DATA(GYRO_ZOUT_H, 1);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
