@@ -38,10 +38,10 @@
 #define GYRO_XOUT_H 0x43
 #define GYRO_YOUT_H 0x45
 #define GYRO_ZOUT_H 0x47
-
+#define WHO_AM_I 0x75
 #define PWR_MGMT_1 0x6B // leave as default value for now
 #define PWR_MGMT_2 0x6C // set to 00000111 to power gyros
-
+#define USR_CTRL 0x6A // disable I2C
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,12 +55,6 @@ SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-int xData = 0;
-int yData = 0;
-int zData = 0;
-double xDataRef = 0;
-double yDataRef = 0;
-double zDataRef = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -69,6 +63,8 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
+void UART_PRINT_VAL(double value);
+void UART_PRINT_TEXT(uint8_t* MSG);
 void IAM_INIT(void);
 int IAM_GET_DATA(uint8_t addr, uint16_t dataSize);
 /* USER CODE END PFP */
@@ -110,15 +106,32 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
   IAM_INIT();
+
+  int xData = 0;
+  int yData = 0;
+  int zData = 0;
+  double xDataRef = 0;
+  double yDataRef = 0;
+  double zDataRef = 0;
+  double whoAMI = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  xData = IAM_GET_DATA(GYRO_XOUT_H, 1);
-	  yData = IAM_GET_DATA(GYRO_YOUT_H, 1);
-	  zData = IAM_GET_DATA(GYRO_ZOUT_H, 1);
+	  xData = IAM_GET_DATA(GYRO_XOUT_H, 2);
+	  //yData = IAM_GET_DATA(GYRO_YOUT_H, 2);
+	  //zData = IAM_GET_DATA(GYRO_ZOUT_H, 2);
+	  xDataRef = xData / 131.0;
+	  UART_PRINT_VAL(xDataRef);
+	  UART_PRINT_TEXT("\n");
+
+	  //whoAMI = IAM_GET_DATA(WHO_AM_I,1);
+	  //UART_PRINT_VAL(whoAMI);
+	  //UART_PRINT_TEXT("\n");
+
+	  HAL_Delay(50);
 
     /* USER CODE END WHILE */
 
@@ -192,9 +205,9 @@ static void MX_SPI1_Init(void)
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi1.Init.DataSize = SPI_DATASIZE_4BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
@@ -202,7 +215,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
   hspi1.Init.CRCPolynomial = 7;
   hspi1.Init.CRCLength = SPI_CRC_LENGTH_DATASIZE;
-  hspi1.Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
+  hspi1.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
   if (HAL_SPI_Init(&hspi1) != HAL_OK)
   {
     Error_Handler();
@@ -301,10 +314,35 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void UART_PRINT_VAL(double value){
+    char total[50];
+    char temp[10];
+    if(value < 0){
+       UART_PRINT_TEXT("-");
+    }
+    sprintf(total, "%i", abs((int)value));
+    strcat(total, ".");
+    double currentVal = (value - (int) value);
+    for(int a=0;a<6;a++){
+        currentVal *= 10;
+        sprintf(temp, "%i", abs((int)currentVal));
+        strcat(total, temp);
+        currentVal -= (int)currentVal;
+    }
+    HAL_UART_Transmit(&huart2, total, strlen(total), 100);
+}
+
+void UART_PRINT_TEXT(uint8_t* MSG){
+	HAL_UART_Transmit(&huart2, MSG, strlen(MSG), 100);
+}
+
 void IAM_INIT(void){
 	uint8_t data1[2] = {PWR_MGMT_2, 0x07};
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET); // chip select for SPI
+	uint8_t data2[2] = {USR_CTRL, 0x10};
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET); // chip select for SPI
 	HAL_SPI_Transmit(&hspi1, data1, 2, 100); // turn on x,y,z gyro
+	HAL_SPI_Transmit(&hspi1, data2, 2, 100); // turn off i2c
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
 }
 
 int IAM_GET_DATA(uint8_t addr, uint16_t dataSize){
@@ -312,9 +350,11 @@ int IAM_GET_DATA(uint8_t addr, uint16_t dataSize){
 	uint16_t value = 0;
 	uint8_t sendData[1] = {0x80 | addr};
 	uint8_t receiveData[2];
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_RESET);
 	HAL_SPI_Transmit(&hspi1, sendData, 1, 100);
 	HAL_SPI_Receive(&hspi1, receiveData, 2, 100);
-	value = (receiveData[1] << 8 | receiveData[0]);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);
+	value = (receiveData[0] << 8 | receiveData[1]);
 	if(value > 0x7fff){
 		value = value - 0x01;
 		value = ~value;
