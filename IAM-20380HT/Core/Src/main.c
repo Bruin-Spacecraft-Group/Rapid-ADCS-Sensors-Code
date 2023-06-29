@@ -127,21 +127,30 @@ int main(void)
   while (1)
   {
 	  xData = IAM_GET_DATA(GYRO_XOUT_H, 2);
-	  //yData = IAM_GET_DATA(GYRO_YOUT_H, 2);
-	  //zData = IAM_GET_DATA(GYRO_ZOUT_H, 2);
+	  yData = IAM_GET_DATA(GYRO_YOUT_H, 2);
+	  zData = IAM_GET_DATA(GYRO_ZOUT_H, 2);
 	  xDataRef = xData / 131.0;
+	  yDataRef = yData / 131.0;
+	  zDataRef = zData / 131.0;
 	  UART_PRINT_VAL(xDataRef);
+	  UART_PRINT_TEXT(" ")
+	  UART_PRINT_VAL(yDataRef);
+	  UART_PRINT_TEXT(" ")
+	  UART_PRINT_VAL(zDataRef);
+	  UART_PRINT_TEXT(" ")
 	  UART_PRINT_TEXT("\n");
 
+/*
 	  counter = (TIM1->CNT);
-	  TIM1->CNT = 0;
+	  if (counter/1000000 > 1){ // if count
+		  UART_PRINT_VAL(counter/1000.0); //print ms
+		  UART_PRINT_TEXT(" ");
+		  TIM1->CNT = 0;
+	  }
 
-	  UART_PRINT_VAL(counter/1000.0);
-	  UART_PRINT_TEXT(" ");
-	  //whoAMI = IAM_GET_DATA(WHO_AM_I,1);
-	  //UART_PRINT_VAL(whoAMI);
-	  //UART_PRINT_TEXT("\n");
-	  HAL_Delay(1);
+	  HAL_DELAY(1);	  // do we still need this
+*/
+
 
     /* USER CODE END WHILE */
 
