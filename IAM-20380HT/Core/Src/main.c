@@ -70,6 +70,7 @@ void UART_PRINT_VAL(double value);
 void UART_PRINT_TEXT(uint8_t* MSG);
 void IAM_INIT(void);
 int IAM_GET_DATA(uint8_t addr, uint16_t dataSize);
+void CALIBRATE(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -110,16 +111,27 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   IAM_INIT();
-
   int xData = 0;
   int yData = 0;
   int zData = 0;
-  double xDataRef = 0;
-  double yDataRef = 0;
-  double zDataRef = 0;
-  double whoAMI = 0;
-  int counter = 0;
+  double xDataCurr = 0;
+  double yDataCurr = 0;
+  double zDataCurr = 0;
+  int trigTime = 0;
+  int prevTime = 0;
+  int currTime = 0;
+  int deltaTime = 0;
+  double xDeg = 0; // integrated value to give degrees from dps
+  double yDeg = 0;
+  double zDeg = 0;
+  double xOffset = 0; // offsets from calibration
+  double yOffset = 0;
+  double zOffset = 0;
+
   HAL_TIM_Base_Start(&htim1);
+  CALIBRATE(); // calibrates
+  TIM1->CNT &= 0x0; // reset the timer
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -129,28 +141,31 @@ int main(void)
 	  xData = IAM_GET_DATA(GYRO_XOUT_H, 2);
 	  yData = IAM_GET_DATA(GYRO_YOUT_H, 2);
 	  zData = IAM_GET_DATA(GYRO_ZOUT_H, 2);
-	  xDataRef = xData / 131.0;
-	  yDataRef = yData / 131.0;
-	  zDataRef = zData / 131.0;
-	  UART_PRINT_VAL(xDataRef);
-	  UART_PRINT_TEXT(" ")
-	  UART_PRINT_VAL(yDataRef);
-	  UART_PRINT_TEXT(" ")
-	  UART_PRINT_VAL(zDataRef);
-	  UART_PRINT_TEXT(" ")
-	  UART_PRINT_TEXT("\n");
+	  xDataCurr = (xData / 131.0) - xOffset;
+	  yDataCurr = (yData / 131.0) - yOffset;
+	  zDataCurr = (zData / 131.0) - zOffset;
 
-/*
-	  counter = (TIM1->CNT);
-	  if (counter/1000000 > 1){ // if count
-		  UART_PRINT_VAL(counter/1000.0); //print ms
+	  prevTime = currTime;
+	  currTime = (TIM1->CNT);
+	  deltaTime = currTime - prevTime;
+
+	  trigTime += deltaTime;
+	  xDeg += (xDataCurr) * (deltaTime);
+	  yDeg += (yDataCurr) * (deltaTime);
+	  zDeg += (zDataCurr) * (deltaTime);
+
+	  if (trigTime > 2000000){
+		  UART_PRINT_VAL(currTime/1000.0); // print ms
 		  UART_PRINT_TEXT(" ");
-		  TIM1->CNT = 0;
+		  UART_PRINT_VAL(xDeg);
+		  UART_PRINT_TEXT(" ");
+		  UART_PRINT_VAL(yDeg);
+		  UART_PRINT_TEXT(" ");
+		  UART_PRINT_VAL(zDeg);
+		  UART_PRINT_TEXT(" ");
+		  UART_PRINT_TEXT("/n");
+		  trigTime = 0;
 	  }
-
-	  HAL_DELAY(1);	  // do we still need this
-*/
-
 
     /* USER CODE END WHILE */
 
@@ -445,6 +460,29 @@ int IAM_GET_DATA(uint8_t addr, uint16_t dataSize){
 	return val;
 }
 
+void CALIBRATE(void){
+	double xDataSum = 0;
+	double yDataSum = 0;
+	double zDataSum = 0;
+	double dataReadings = 0;
+
+	while (TIM1->CNT < 10000000){ // 10 seconds
+		xData = IAM_GET_DATA(GYRO_XOUT_H, 2);
+		yData = IAM_GET_DATA(GYRO_YOUT_H, 2);
+		zData = IAM_GET_DATA(GYRO_ZOUT_H, 2);
+		xDataCurr = xData / 131.0;
+		xDataSum += xDataCurr;
+		yDataCurr = yData / 131.0;
+		yDataSum += yDataCurr;
+		zDataCurr = zData / 131.0;
+		zDataSum += zDataCurr;
+		dataReadings += 1;
+	}
+
+	xOffset = xDataSum / dataReadings;
+	yOffset = yDataSum / dataReadings;
+	zOffset = zDataSum / dataReadings;
+}
 /* USER CODE END 4 */
 
 /**
